@@ -216,8 +216,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTranscriptionStore } from '@/stores/transcription'
 import { getSession, exportSession, summarizeSession } from '@/services/api'
-import MarkdownIt from 'markdown-it'
-import DOMPurify from 'dompurify'
+import { renderMarkdown } from '@/utils/markdown'
+import { getSpeakerColor, formatDate, formatDuration, formatTime } from '@/utils/speaker'
 
 const route = useRoute()
 const store = useTranscriptionStore()
@@ -231,37 +231,9 @@ const aiResponse = ref('')
 const customQuestion = ref('')
 
 // Markdown 渲染
-const md = new MarkdownIt({ html: false, linkify: true, breaks: true })
-const aiHtml = computed(() => {
-  try {
-    const html = md.render(aiResponse.value || '')
-    return DOMPurify.sanitize(html)
-  } catch (e) {
-    return (aiResponse.value || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  }
-})
-const aiSummaryHtml = computed(() => {
-  try {
-    const html = md.render((session.value?.ai_summary) || '')
-    return DOMPurify.sanitize(html)
-  } catch (e) {
-    return ((session.value?.ai_summary) || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  }
-})
-const aiActionItemsHtml = computed(() => {
-  try {
-    const html = md.render((session.value?.ai_action_items) || '')
-    return DOMPurify.sanitize(html)
-  } catch (e) {
-    return ((session.value?.ai_action_items) || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  }
-})
-
-// 发言人颜色
-const speakerColors = [
-  '#000000', '#333333', '#666666', '#999999',
-  '#1a1a1a', '#4d4d4d', '#737373', '#a6a6a6'
-]
+const aiHtml = computed(() => renderMarkdown(aiResponse.value))
+const aiSummaryHtml = computed(() => renderMarkdown(session.value?.ai_summary || ''))
+const aiActionItemsHtml = computed(() => renderMarkdown(session.value?.ai_action_items || ''))
 
 async function loadSession() {
   loading.value = true
@@ -279,35 +251,6 @@ async function loadSession() {
 function exportFile(format) {
   exportSession(session.value.session_id, format)
   showExportMenu.value = false
-}
-
-function getSpeakerColor(speaker) {
-  const speakerNum = parseInt(speaker.replace(/\D/g, '')) || 0
-  return speakerColors[speakerNum % speakerColors.length]
-}
-
-function formatDate(dateString) {
-  const date = new Date(dateString)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-function formatDuration(seconds) {
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
-function formatTime(ms) {
-  const totalSeconds = Math.floor(ms / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
 function getStatusText(status) {
@@ -364,32 +307,3 @@ onMounted(() => {
   loadSession()
 })
 </script>
-
-<style scoped>
-.loading-dots span {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin: 0 2px;
-  background-color: #000;
-  border-radius: 50%;
-  animation: loading 1.4s infinite ease-in-out both;
-}
-
-.loading-dots span:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.loading-dots span:nth-child(2) {
-  animation-delay: -0.16s;
-}
-
-@keyframes loading {
-  0%, 80%, 100% {
-    transform: scale(0);
-  }
-  40% {
-    transform: scale(1);
-  }
-}
-</style>

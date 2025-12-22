@@ -83,8 +83,7 @@
 import { ref, computed } from 'vue'
 import { useTranscriptionStore } from '@/stores/transcription'
 import { summarizeSession, askQuestion } from '@/services/api'
-import MarkdownIt from 'markdown-it'
-import DOMPurify from 'dompurify'
+import { renderMarkdown } from '@/utils/markdown'
 
 const store = useTranscriptionStore()
 const isProcessing = ref(false)
@@ -92,15 +91,7 @@ const aiResponse = ref('')
 const customQuestion = ref('')
 
 // Markdown 渲染
-const md = new MarkdownIt({ html: false, linkify: true, breaks: true })
-const aiHtml = computed(() => {
-  try {
-    const html = md.render(aiResponse.value || '')
-    return DOMPurify.sanitize(html)
-  } catch (e) {
-    return (aiResponse.value || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  }
-})
+const aiHtml = computed(() => renderMarkdown(aiResponse.value))
 
 async function summarize() {
   await processRequest('请总结以下会议内容的要点，以清晰的列表形式呈现：')
@@ -148,32 +139,3 @@ async function processRequest(prompt) {
   }
 }
 </script>
-
-<style scoped>
-.loading-dots span {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin: 0 2px;
-  background-color: #666;
-  border-radius: 50%;
-  animation: loading 1.4s infinite ease-in-out both;
-}
-
-.loading-dots span:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.loading-dots span:nth-child(2) {
-  animation-delay: -0.16s;
-}
-
-@keyframes loading {
-  0%, 80%, 100% {
-    transform: scale(0);
-  }
-  40% {
-    transform: scale(1);
-  }
-}
-</style>

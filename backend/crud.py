@@ -1,19 +1,54 @@
 import json
 from typing import List, Optional
-from sqlalchemy import select, desc, or_
+from sqlalchemy import select, desc, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 from database import TranscriptionSessionDB
 from models import TranscriptionSession
 
 
-async def create_session(db: AsyncSession, session: TranscriptionSession) -> TranscriptionSessionDB:
-    """创建新的转录会话"""
-    # 计算统计信息
+def _calculate_stats(session: TranscriptionSession) -> tuple:
+    """
+    计算会话统计信息
+
+    Args:
+        session: TranscriptionSession对象
+
+    Returns:
+        (word_count, speaker_count, duration_seconds)
+    """
     word_count = len(session.full_transcript.split()) if session.full_transcript else 0
     speaker_count = len(set(seg.speaker for seg in session.segments))
+    duration_seconds = 0.0
+    if session.segments:
+        last_segment = session.segments[-1]
+        duration_seconds = last_segment.end_time / 1000.0
+    return word_count, speaker_count, duration_seconds
 
-    # 创建数据库记录
+
+async def _get_session_by_id(
+    db: AsyncSession, session_id: str
+) -> Optional[TranscriptionSessionDB]:
+    """
+    根据会话ID获取会话记录
+
+    Args:
+        db: 数据库会话
+        session_id: 会话ID
+
+    Returns:
+        TranscriptionSessionDB对象，不存在则返回None
+    """
+    result = await db.execute(
+        select(TranscriptionSessionDB).where(TranscriptionSessionDB.session_id == session_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def create_session(db: AsyncSession, session: TranscriptionSession) -> TranscriptionSessionDB:
+    """创建新的转录会话"""
+    word_count, speaker_count, duration_seconds = _calculate_stats(session)
+
     db_session = TranscriptionSessionDB(
         session_id=session.session_id,
         title=session.title,
@@ -22,15 +57,10 @@ async def create_session(db: AsyncSession, session: TranscriptionSession) -> Tra
         status=session.status,
         segments_json=json.dumps([seg.model_dump() for seg in session.segments]),
         full_transcript=session.full_transcript,
-        duration_seconds=0.0,  # 可以从最后一个 segment 的时间计算
+        duration_seconds=duration_seconds,
         speaker_count=speaker_count,
         word_count=word_count
     )
-
-    # 计算持续时间
-    if session.segments:
-        last_segment = session.segments[-1]
-        db_session.duration_seconds = last_segment.end_time / 1000.0
 
     db.add(db_session)
     await db.commit()
@@ -44,17 +74,12 @@ async def update_session(
     session: TranscriptionSession
 ) -> Optional[TranscriptionSessionDB]:
     """更新转录会话"""
-    result = await db.execute(
-        select(TranscriptionSessionDB).where(TranscriptionSessionDB.session_id == session_id)
-    )
-    db_session = result.scalar_one_or_none()
+    db_session = await _get_session_by_id(db, session_id)
 
     if not db_session:
         return None
 
-    # 更新数据
-    word_count = len(session.full_transcript.split()) if session.full_transcript else 0
-    speaker_count = len(set(seg.speaker for seg in session.segments))
+    word_count, speaker_count, duration_seconds = _calculate_stats(session)
 
     db_session.title = session.title
     db_session.status = session.status
@@ -62,12 +87,8 @@ async def update_session(
     db_session.full_transcript = session.full_transcript
     db_session.word_count = word_count
     db_session.speaker_count = speaker_count
+    db_session.duration_seconds = duration_seconds
     db_session.updated_at = datetime.utcnow()
-
-    # 更新持续时间
-    if session.segments:
-        last_segment = session.segments[-1]
-        db_session.duration_seconds = last_segment.end_time / 1000.0
 
     await db.commit()
     await db.refresh(db_session)
@@ -76,10 +97,7 @@ async def update_session(
 
 async def get_session(db: AsyncSession, session_id: str) -> Optional[TranscriptionSessionDB]:
     """获取单个会话"""
-    result = await db.execute(
-        select(TranscriptionSessionDB).where(TranscriptionSessionDB.session_id == session_id)
-    )
-    return result.scalar_one_or_none()
+    return await _get_session_by_id(db, session_id)
 
 
 async def get_sessions(
@@ -112,10 +130,7 @@ async def get_sessions(
 
 async def delete_session(db: AsyncSession, session_id: str) -> bool:
     """删除会话"""
-    result = await db.execute(
-        select(TranscriptionSessionDB).where(TranscriptionSessionDB.session_id == session_id)
-    )
-    db_session = result.scalar_one_or_none()
+    db_session = await _get_session_by_id(db, session_id)
 
     if not db_session:
         return False
@@ -131,10 +146,7 @@ async def update_ai_summary(
     summary: str
 ) -> Optional[TranscriptionSessionDB]:
     """更新 AI 总结"""
-    result = await db.execute(
-        select(TranscriptionSessionDB).where(TranscriptionSessionDB.session_id == session_id)
-    )
-    db_session = result.scalar_one_or_none()
+    db_session = await _get_session_by_id(db, session_id)
 
     if not db_session:
         return None
@@ -153,10 +165,7 @@ async def update_ai_action_items(
     action_items: str
 ) -> Optional[TranscriptionSessionDB]:
     """更新 AI 待办事项"""
-    result = await db.execute(
-        select(TranscriptionSessionDB).where(TranscriptionSessionDB.session_id == session_id)
-    )
-    db_session = result.scalar_one_or_none()
+    db_session = await _get_session_by_id(db, session_id)
 
     if not db_session:
         return None
@@ -171,8 +180,6 @@ async def update_ai_action_items(
 
 async def get_session_count(db: AsyncSession, search: Optional[str] = None) -> int:
     """获取会话总数"""
-    from sqlalchemy import func
-
     query = select(func.count(TranscriptionSessionDB.id))
 
     if search:

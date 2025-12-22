@@ -21,72 +21,16 @@ from soniox_service import SonioxWebSocketService
 from openai_service import OpenAIService
 from database import get_db, init_db, TranscriptionSessionDB, SettingDB, async_session_maker
 import crud
+from config_service import ConfigService
+from auth_service import AuthService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Soniox Transcription Platform")
 # ============== 简单密码登录（Cookie） ==============
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
 ACCESS_PASSWORD = os.getenv("ACCESS_PASSWORD", "")
-COOKIE_NAME = "auth_token"
-TOKEN_TTL_SECONDS = 60 * 60 * 12  # 12h
 
-
-def _sign(payload: str) -> str:
-    mac = hmac.new(SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
-    return f"{base64.urlsafe_b64encode(payload.encode()).decode()}.{mac}"
-
-
-def _verify(token: str) -> bool:
-    try:
-        data_b64, mac = token.split(".", 1)
-        payload = base64.urlsafe_b64decode(data_b64.encode()).decode()
-        if hmac.new(SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest() != mac:
-            return False
-        parts = payload.split("|")
-        exp = 0
-        for p in parts:
-            if p.startswith("exp:"):
-                exp = int(p.split(":", 1)[1])
-        return int(datetime.utcnow().timestamp()) < exp
-    except Exception:
-        return False
-
-
-def _set_auth_cookie(response, ttl=TOKEN_TTL_SECONDS):
-    exp = int((datetime.utcnow() + timedelta(seconds=ttl)).timestamp())
-    payload = f"auth|exp:{exp}"
-    token = _sign(payload)
-    response.set_cookie(
-        COOKIE_NAME,
-        token,
-        httponly=True,
-        secure=True,
-        samesite="Lax",
-        max_age=ttl,
-        path="/",
-    )
-
-
-def _clear_auth_cookie(response):
-    response.delete_cookie(COOKIE_NAME, path="/")
-
-def _random_salt() -> str:
-    return base64.urlsafe_b64encode(os.urandom(16)).decode()
-
-def _hash_password(password: str, salt: str) -> str:
-    digest = hashlib.sha256((salt + password).encode()).hexdigest()
-    return f"v1${salt}${digest}"
-
-def _verify_password(stored: str, password: str) -> bool:
-    try:
-        ver, salt, digest = stored.split("$", 2)
-        if ver != "v1":
-            return False
-        return hashlib.sha256((salt + password).encode()).hexdigest() == digest
-    except Exception:
-        return False
 
 async def _get_setting(key: str) -> Optional[str]:
     async with async_session_maker() as session:
@@ -114,32 +58,32 @@ async def _is_initialized() -> bool:
 async def auth_login(body: dict):
     from fastapi import Response, HTTPException
     pwd = (body or {}).get("password", "")
-    # 若设置了环境变量密码，则优先使用（企业部署固定密码）
+    # 验证密码（使用 AuthService）
     if ACCESS_PASSWORD:
         if pwd != ACCESS_PASSWORD:
             raise HTTPException(status_code=401, detail="Invalid password")
     else:
         stored = await _get_setting("password_hash")
-        if not stored or not _verify_password(stored, pwd):
+        if not stored or not AuthService.verify_password(stored, pwd):
             raise HTTPException(status_code=401, detail="Invalid password")
     resp = Response(content=json.dumps({"ok": True}), media_type="application/json")
-    _set_auth_cookie(resp)
+    AuthService.set_auth_cookie(resp)
     return resp
 
 
 from fastapi import Request
 @app.get("/auth/status")
 async def auth_status(request: Request):
-    token = request.cookies.get(COOKIE_NAME)
+    token = request.cookies.get(AuthService.COOKIE_NAME)
     setup_needed = not await _is_initialized()
-    return {"ok": bool(token) and _verify(token), "setup": setup_needed}
+    return {"ok": bool(token) and AuthService.verify(token), "setup": setup_needed}
 
 
 @app.post("/auth/logout")
 async def auth_logout():
     from fastapi import Response
     resp = Response(content=json.dumps({"ok": True}), media_type="application/json")
-    _clear_auth_cookie(resp)
+    AuthService.clear_auth_cookie(resp)
     return resp
 
 @app.post("/auth/setup")
@@ -152,19 +96,19 @@ async def auth_setup(body: dict):
     pwd = (body or {}).get("password", "")
     if not pwd or len(pwd) < 4:
         raise HTTPException(status_code=400, detail="Password too short")
-    salt = _random_salt()
-    stored = _hash_password(pwd, salt)
+    salt = AuthService.generate_salt()
+    stored = AuthService.hash_password(pwd, salt)
     await _set_setting("password_hash", stored)
     resp = Response(content=json.dumps({"ok": True}), media_type="application/json")
-    _set_auth_cookie(resp)
+    AuthService.set_auth_cookie(resp)
     return resp
 
 def _require_auth(request: Request):
     if not ACCESS_PASSWORD and asyncio.get_event_loop().is_running():
         # 若未开启密码模式，但已初始化设置，则也要求登录
         pass
-    token = request.cookies.get(COOKIE_NAME)
-    if ACCESS_PASSWORD and (not token or not _verify(token)):
+    token = request.cookies.get(AuthService.COOKIE_NAME)
+    if ACCESS_PASSWORD and (not token or not AuthService.verify(token)):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 # 全局云端配置存取
@@ -263,8 +207,8 @@ async def transcribe_websocket(websocket: WebSocket):
     """
     await websocket.accept()
     # 认证校验（基于 Cookie）
-    token = websocket.cookies.get(COOKIE_NAME)
-    if ACCESS_PASSWORD and (not token or not _verify(token)):
+    token = websocket.cookies.get(AuthService.COOKIE_NAME)
+    if ACCESS_PASSWORD and (not token or not AuthService.verify(token)):
         await websocket.close(code=4401)
         return
     session_id = str(uuid.uuid4())
@@ -519,22 +463,12 @@ async def summarize_session(request: SummarizeRequest, db: AsyncSession = Depend
     if not transcript:
         raise HTTPException(status_code=400, detail="No transcript available")
 
-    # 创建 OpenAI 服务（若未传 api_key 则使用服务器保存）
-    openai_cfg = request.openai_config
-    if not openai_cfg.api_key:
-        stored_key = await _get_setting("openai_api_key")
-        if stored_key:
-            # 尝试加载服务器保存的非密钥字段
-            raw = await _get_setting("openai_config") or "{}"
-            try:
-                base = json.loads(raw)
-            except Exception:
-                base = {}
-            openai_cfg = OpenAIConfig(
-                api_url=base.get("api_url", openai_cfg.api_url),
-                api_key=stored_key,
-                model=base.get("model", openai_cfg.model),
-            )
+    # 创建 OpenAI 服务（若未传 api_key 则使用服务器保存的配置）
+    openai_cfg = await ConfigService.load_openai_config_with_fallback(
+        request.openai_config,
+        default_api_url="https://api.openai.com/v1",
+        default_model="gpt-4o-mini"
+    )
     openai_service = OpenAIService(openai_cfg)
 
     # 流式返回总结
@@ -570,21 +504,12 @@ async def answer_question(request: QuestionRequest, db: AsyncSession = Depends(g
     if not transcript:
         raise HTTPException(status_code=400, detail="No transcript available")
 
-    # 创建 OpenAI 服务（若未传 api_key 则使用服务器保存）
-    openai_cfg = request.openai_config
-    if not openai_cfg.api_key:
-        stored_key = await _get_setting("openai_api_key")
-        if stored_key:
-            raw = await _get_setting("openai_config") or "{}"
-            try:
-                base = json.loads(raw)
-            except Exception:
-                base = {}
-            openai_cfg = OpenAIConfig(
-                api_url=base.get("api_url", openai_cfg.api_url),
-                api_key=stored_key,
-                model=base.get("model", openai_cfg.model),
-            )
+    # 创建 OpenAI 服务（若未传 api_key 则使用服务器保存的配置）
+    openai_cfg = await ConfigService.load_openai_config_with_fallback(
+        request.openai_config,
+        default_api_url="https://api.openai.com/v1",
+        default_model="gpt-4o-mini"
+    )
     openai_service = OpenAIService(openai_cfg)
 
     # 流式返回回答

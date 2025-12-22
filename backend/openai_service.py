@@ -1,4 +1,5 @@
 import logging
+import json
 from typing import AsyncGenerator
 import aiohttp
 from models import OpenAIConfig
@@ -14,39 +15,37 @@ class OpenAIService:
         self.config = config
         self.api_url = config.api_url.rstrip("/") + "/chat/completions"
 
-    async def summarize(self, transcript: str, prompt: str) -> AsyncGenerator[str, None]:
+    async def _stream_response(
+        self,
+        system_prompt: str,
+        user_content: str
+    ) -> AsyncGenerator[str, None]:
         """
-        使用 OpenAI 兼容 API 总结转录内容（流式）
+        通用的流式响应处理方法
 
         Args:
-            transcript: 转录文本
-            prompt: 总结提示词
+            system_prompt: 系统提示词
+            user_content: 用户内容
 
         Yields:
-            总结内容的流式文本块
+            流式文本块
         """
+        headers = {
+            "Authorization": f"Bearer {self.config.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": self.config.model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content}
+            ],
+            "stream": True,
+            "temperature": 0.7
+        }
+
         try:
-            headers = {
-                "Authorization": f"Bearer {self.config.api_key}",
-                "Content-Type": "application/json"
-            }
-
-            payload = {
-                "model": self.config.model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "你是一个专业的会议助手，擅长总结和分析会议内容。"
-                    },
-                    {
-                        "role": "user",
-                        "content": f"{prompt}\n\n转录内容：\n{transcript}"
-                    }
-                ],
-                "stream": True,
-                "temperature": 0.7
-            }
-
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     self.api_url,
@@ -69,7 +68,6 @@ class OpenAIService:
                                 break
 
                             try:
-                                import json
                                 data = json.loads(data_str)
                                 if "choices" in data and len(data["choices"]) > 0:
                                     delta = data["choices"][0].get("delta", {})
@@ -82,6 +80,23 @@ class OpenAIService:
         except Exception as e:
             logger.error(f"Error in OpenAI service: {str(e)}")
             yield f"错误: {str(e)}"
+
+    async def summarize(self, transcript: str, prompt: str) -> AsyncGenerator[str, None]:
+        """
+        使用 OpenAI 兼容 API 总结转录内容（流式）
+
+        Args:
+            transcript: 转录文本
+            prompt: 总结提示词
+
+        Yields:
+            总结内容的流式文本块
+        """
+        user_content = f"{prompt}\n\n转录内容：\n{transcript}"
+        system_prompt = "你是一个专业的会议助手，擅长总结和分析会议内容。"
+
+        async for chunk in self._stream_response(system_prompt, user_content):
+            yield chunk
 
     async def answer_question(
         self, transcript: str, question: str
@@ -96,60 +111,8 @@ class OpenAIService:
         Yields:
             回答内容的流式文本块
         """
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.config.api_key}",
-                "Content-Type": "application/json"
-            }
+        user_content = f"会议转录内容：\n{transcript}\n\n问题：{question}"
+        system_prompt = "你是一个专业的会议助手。请根据提供的会议转录内容回答用户的问题。"
 
-            payload = {
-                "model": self.config.model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "你是一个专业的会议助手。请根据提供的会议转录内容回答用户的问题。"
-                    },
-                    {
-                        "role": "user",
-                        "content": f"会议转录内容：\n{transcript}\n\n问题：{question}"
-                    }
-                ],
-                "stream": True,
-                "temperature": 0.7
-            }
-
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self.api_url,
-                    headers=headers,
-                    json=payload
-                ) as response:
-                    if response.status != 200:
-                        error_text = await response.text()
-                        logger.error(f"OpenAI API error: {error_text}")
-                        yield f"错误: {error_text}"
-                        return
-
-                    # 处理流式响应
-                    async for line in response.content:
-                        line = line.decode("utf-8").strip()
-                        if line.startswith("data: "):
-                            data_str = line[6:]
-
-                            if data_str == "[DONE]":
-                                break
-
-                            try:
-                                import json
-                                data = json.loads(data_str)
-                                if "choices" in data and len(data["choices"]) > 0:
-                                    delta = data["choices"][0].get("delta", {})
-                                    content = delta.get("content", "")
-                                    if content:
-                                        yield content
-                            except json.JSONDecodeError:
-                                continue
-
-        except Exception as e:
-            logger.error(f"Error in OpenAI service: {str(e)}")
-            yield f"错误: {str(e)}"
+        async for chunk in self._stream_response(system_prompt, user_content):
+            yield chunk

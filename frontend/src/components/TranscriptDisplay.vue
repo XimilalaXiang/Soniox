@@ -54,29 +54,12 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue'
 import { useTranscriptionStore } from '@/stores/transcription'
+import { getSpeakerColor, formatTime } from '@/utils/speaker'
 
 const store = useTranscriptionStore()
 const transcriptContainer = ref(null)
 const currentText = ref('')
 const currentSpeaker = ref('')
-
-// 发言人颜色映射
-const speakerColors = [
-  '#000000', '#333333', '#666666', '#999999',
-  '#1a1a1a', '#4d4d4d', '#737373', '#a6a6a6'
-]
-
-function getSpeakerColor(speaker) {
-  const speakerNum = parseInt(speaker.replace(/\D/g, '')) || 0
-  return speakerColors[speakerNum % speakerColors.length]
-}
-
-function formatTime(ms) {
-  const totalSeconds = Math.floor(ms / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
-}
 
 // 自动滚动到底部
 watch(() => store.segments.length, async () => {
