@@ -7,7 +7,7 @@
           <div>
             <h1 class="text-3xl font-bold">Soniox 实时转录平台</h1>
             <p class="text-sm text-gray-600 mt-1">
-              基于 Soniox V3 的专业语音转文字解决方案
+              基于 Soniox V4 的专业语音转文字解决方案
             </p>
           </div>
           <div class="flex space-x-3">
@@ -62,7 +62,7 @@
         <p>
           Powered by
           <a href="https://soniox.com" target="_blank" class="font-semibold hover:underline">
-            Soniox V3
+            Soniox V4
           </a>
           | 实时语音识别与转录
         </p>

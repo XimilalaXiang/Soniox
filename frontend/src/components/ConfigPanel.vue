@@ -19,7 +19,8 @@
         <div>
           <label class="block text-sm font-medium mb-1">模型</label>
           <select v-model="localSonioxConfig.model" class="input w-full">
-            <option value="stt-rt-v3">stt-rt-v3 (推荐)</option>
+            <option value="stt-rt-v4">stt-rt-v4 (推荐)</option>
+            <option value="stt-rt-v3">stt-rt-v3</option>
             <option value="stt-rt-preview">stt-rt-preview</option>
           </select>
         </div>
@@ -89,7 +90,7 @@ const store = useTranscriptionStore()
 
 const localSonioxConfig = ref({
   api_key: '',
-  model: 'stt-rt-v3',
+  model: 'stt-rt-v4',
   enable_speaker_diarization: true,
   enable_language_identification: false,
   language_hints: []

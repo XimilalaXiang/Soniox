@@ -16,7 +16,7 @@ export const useTranscriptionStore = defineStore('transcription', () => {
   // Soniox 配置
   const sonioxConfig = ref({
     api_key: localStorage.getItem('soniox_api_key') || '',
-    model: 'stt-rt-v3',
+    model: 'stt-rt-v4',
     enable_speaker_diarization: true,
     enable_language_identification: false,
     enable_endpoint_detection: true,

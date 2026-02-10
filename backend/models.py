@@ -36,7 +36,7 @@ class TranscriptionSession(BaseModel):
 class SonioxConfig(BaseModel):
     """Soniox API 配置"""
     api_key: str
-    model: str = "stt-rt-v3"
+    model: str = "stt-rt-v4"
     enable_speaker_diarization: bool = True
     enable_language_identification: bool = False
     enable_endpoint_detection: bool = True
