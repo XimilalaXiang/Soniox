@@ -126,6 +126,7 @@ async def get_config(request: Request):
         soniox_cfg, openai_cfg = {}, {}
     # 掩码返回：不回显密钥，仅返回 has_api_key 标记
     soniox_cfg.pop("api_key", None)
+    soniox_cfg["model"] = "stt-rt-v4"
     openai_cfg.pop("api_key", None)
     soniox_cfg["has_api_key"] = bool(soniox_key)
     openai_cfg["has_api_key"] = bool(openai_key)
@@ -153,6 +154,7 @@ async def put_config(request: Request):
         raise HTTPException(status_code=400, detail=str(e))
     # 保存（密钥分开存储；留空不更新；clear_* 为 true 时清空）
     if soniox:
+        soniox["model"] = "stt-rt-v4"
         key = soniox.get("api_key")
         if key:
             await _set_setting("soniox_api_key", key)
@@ -237,6 +239,7 @@ async def transcribe_websocket(websocket: WebSocket):
 
         # 解析 Soniox 配置
         incoming_cfg = dict(config_data["config"])
+        incoming_cfg["model"] = "stt-rt-v4"
         if not incoming_cfg.get("api_key"):
             # 若前端未回显/未发送密钥，则从服务器保存中补全
             stored_key = await _get_setting("soniox_api_key")

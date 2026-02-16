@@ -20,9 +20,30 @@
           <label class="block text-sm font-medium mb-1">模型</label>
           <select v-model="localSonioxConfig.model" class="input w-full">
             <option value="stt-rt-v4">stt-rt-v4 (推荐)</option>
-            <option value="stt-rt-v3">stt-rt-v3</option>
-            <option value="stt-rt-preview">stt-rt-preview</option>
           </select>
+        </div>
+        <div class="flex items-center">
+          <input
+            v-model="localSonioxConfig.enable_endpoint_detection"
+            type="checkbox"
+            id="endpoint-detection"
+            class="mr-2 w-5 h-5"
+          />
+          <label for="endpoint-detection" class="text-sm font-medium">
+            启用语义端点检测
+          </label>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">端点等待上限（毫秒）</label>
+          <input
+            v-model.number="localSonioxConfig.max_endpoint_delay_ms"
+            type="number"
+            min="500"
+            max="3000"
+            step="100"
+            class="input w-full"
+          />
+          <p class="text-xs text-gray-500 mt-1">范围 500-3000。更小更灵敏，更大更耐心。</p>
         </div>
         <div class="flex items-center">
           <input
@@ -93,6 +114,8 @@ const localSonioxConfig = ref({
   model: 'stt-rt-v4',
   enable_speaker_diarization: true,
   enable_language_identification: false,
+  enable_endpoint_detection: true,
+  max_endpoint_delay_ms: 2000,
   language_hints: []
 })
 
@@ -113,6 +136,9 @@ onMounted(async () => {
       const data = await r.json()
       if (data.soniox_config) {
         localSonioxConfig.value = { ...localSonioxConfig.value, ...data.soniox_config }
+        if (localSonioxConfig.value.model !== 'stt-rt-v4') {
+          localSonioxConfig.value.model = 'stt-rt-v4'
+        }
         sonioxHasKey.value = !!data.soniox_config.has_api_key
       } else {
         localSonioxConfig.value = { ...store.sonioxConfig }
@@ -135,6 +161,15 @@ onMounted(async () => {
 })
 
 function saveConfig() {
+  localSonioxConfig.value.model = 'stt-rt-v4'
+
+  const endpointDelay = Number(localSonioxConfig.value.max_endpoint_delay_ms)
+  if (Number.isFinite(endpointDelay)) {
+    localSonioxConfig.value.max_endpoint_delay_ms = Math.min(3000, Math.max(500, endpointDelay))
+  } else {
+    localSonioxConfig.value.max_endpoint_delay_ms = 2000
+  }
+
   // 本地持久化（作为离线回退）
   store.saveSonioxConfig(localSonioxConfig.value)
   store.saveOpenAIConfig(localOpenAIConfig.value)

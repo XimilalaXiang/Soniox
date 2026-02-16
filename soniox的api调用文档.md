@@ -1,6 +1,15 @@
 # Get started
 URL: /stt/get-started
 
+> 注意：本文件是历史快照，内容中可能包含 Soniox V3 示例。
+>
+> 本项目现已统一按 **Soniox Real-Time V4** 运行（`model: stt-rt-v4`）。
+>
+> 推荐优先查看最新官方文档：
+> - V4 发布说明：<https://soniox.com/blog/2026-02-05-soniox-v4-real-time/>
+> - WebSocket API：<https://soniox.com/docs/stt/api-reference/websocket-api>
+> - Endpoint Detection（含 `max_endpoint_delay_ms`）：<https://soniox.com/docs/stt/rt/endpoint-detection>
+
 Learn how to use Soniox Speech-to-Text API.
 
 ***
@@ -6883,4 +6892,3 @@ Note that the projects linked here are community-built integrations and are not 
 A Python SDK that calls the Soniox async API, enabling processing of audio files.
 
 Link to the GitHub repository: [Python SDK](https://github.com/mahdikiani/soniox-sdk).
-

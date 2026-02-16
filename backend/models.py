@@ -40,6 +40,7 @@ class SonioxConfig(BaseModel):
     enable_speaker_diarization: bool = True
     enable_language_identification: bool = False
     enable_endpoint_detection: bool = True
+    max_endpoint_delay_ms: int = Field(default=2000, ge=500, le=3000)
     language_hints: List[str] = []
     # 可选的原始音频格式配置（用于 PCM 回退）
     audio_format: Optional[str] = None  # 例如: "pcm_s16le" 或 "auto"

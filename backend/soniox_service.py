@@ -46,6 +46,7 @@ class SonioxWebSocketService:
                 "enable_speaker_diarization": self.config.enable_speaker_diarization,
                 "enable_language_identification": self.config.enable_language_identification,
                 "enable_endpoint_detection": getattr(self.config, "enable_endpoint_detection", True),
+                "max_endpoint_delay_ms": getattr(self.config, "max_endpoint_delay_ms", 2000),
             }
             if self.config.audio_format and self.config.audio_format.startswith("pcm"):
                 if self.config.sample_rate:
@@ -109,8 +110,8 @@ class SonioxWebSocketService:
                         await on_message({
                             "type": "transcription",
                             "tokens": [token.model_dump() for token in tokens],
-                            "audio_final_proc_ms": data.get("audio_final_proc_ms", 0.0),
-                            "audio_total_proc_ms": data.get("audio_total_proc_ms", 0.0)
+                            "final_audio_proc_ms": data.get("final_audio_proc_ms", data.get("audio_final_proc_ms", 0.0)),
+                            "total_audio_proc_ms": data.get("total_audio_proc_ms", data.get("audio_total_proc_ms", 0.0)),
                         })
 
                     # 处理其他消息类型

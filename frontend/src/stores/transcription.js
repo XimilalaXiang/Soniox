@@ -20,6 +20,7 @@ export const useTranscriptionStore = defineStore('transcription', () => {
     enable_speaker_diarization: true,
     enable_language_identification: false,
     enable_endpoint_detection: true,
+    max_endpoint_delay_ms: 2000,
     language_hints: []
   })
 
@@ -42,6 +43,7 @@ export const useTranscriptionStore = defineStore('transcription', () => {
   function saveSonioxConfig(config) {
     const normalized = {
       ...config,
+      model: 'stt-rt-v4',
       api_key: (config.api_key || '').trim().replace(/\s+/g, '')
     }
     sonioxConfig.value = normalized
