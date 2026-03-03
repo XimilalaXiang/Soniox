@@ -44,26 +44,58 @@
 
 ### 方式一：Docker 部署（推荐）
 
+镜像已通过 GitHub Actions 自动构建并推送到 GHCR，无需本地编译。
+
 1. **克隆项目**
 ```bash
-git clone <repository-url>
-cd Awesone-Soniox
+git clone https://github.com/XimilalaXiang/Soniox.git
+cd Soniox
 ```
 
-2. **启动服务**
+2. **准备环境变量（首次必做）**
 ```bash
-docker-compose up -d
+cp .env.example .env
+# 编辑 .env，至少设置 SECRET_KEY
 ```
 
-3. **访问应用**
-打开浏览器访问 `http://localhost` 或 `http://your-server-ip`
-
-4. **停止服务**
+3. **拉取镜像并启动**
 ```bash
-docker-compose down
+docker compose pull
+docker compose up -d
+```
+
+或者使用一键脚本：
+```bash
+./start.sh
+```
+
+4. **访问应用**
+打开浏览器访问 `http://localhost:10081` 或 `http://your-server-ip:10081`
+
+5. **更新到最新版本**
+```bash
+docker compose pull
+docker compose up -d
+```
+
+6. **回滚到指定镜像版本（可选）**
+```bash
+# 示例：回滚到某次 CI 产出的提交标签
+SONIOX_IMAGE_TAG=sha-<commit_sha> docker compose pull
+SONIOX_IMAGE_TAG=sha-<commit_sha> docker compose up -d
+```
+
+7. **停止服务**
+```bash
+docker compose down
 ```
 
 ### 方式二：本地开发部署
+
+> 如需修改代码并本地构建镜像，请使用 `docker-compose.dev.yml`：
+> ```bash
+> docker compose -f docker-compose.dev.yml up -d --build
+> ```
 
 #### 后端设置
 
@@ -116,6 +148,14 @@ npm run dev
 ```bash
 npm run build
 ```
+
+## 📦 Android APK（Docker 架构不变）
+
+已支持在保留现有 Docker 部署的情况下，新增 Android APK 壳应用版本。
+
+- 现有后端、数据库、WebSocket 和 API 路径不变
+- APK 通过 HTTPS 访问你当前部署的站点
+- 打包说明见：[frontend/ANDROID_APK.md](./frontend/ANDROID_APK.md)
 
 ## ⚙️ 配置说明
 

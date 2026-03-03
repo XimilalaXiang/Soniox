@@ -5,21 +5,28 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "android:sync": "node scripts/android-sync.mjs",
+    "android:open": "npx cap open android",
+    "android:copy": "npx cap copy android"
   },
   "dependencies": {
-    "vue": "^3.5.13",
-    "pinia": "^2.2.8",
-    "vue-router": "^4.5.0",
     "axios": "^1.7.9",
+    "dompurify": "^3.1.6",
     "markdown-it": "^14.1.0",
-    "dompurify": "^3.1.6"
+    "pinia": "^2.2.8",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.5.0",
+    "@capacitor/cli": "^7.5.0",
+    "@capacitor/core": "^7.5.0",
     "@vitejs/plugin-vue": "^5.2.1",
-    "vite": "^6.0.3",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.3"
   }
 }

@@ -1,6 +1,11 @@
+# 开发者本地构建用，使用方式：
+#   docker compose -f docker-compose.dev.yml up -d --build
+
 services:
   backend:
-    image: ghcr.io/ximilalaxiang/opensoniox-backend:${SONIOX_IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: soniox-backend
     restart: unless-stopped
     expose:
@@ -10,7 +15,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=sqlite+aiosqlite:///./data/transcriptions.db
-      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env or environment}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret}
       - ACCESS_PASSWORD=${ACCESS_PASSWORD:-}
     networks:
       - soniox-network
@@ -21,7 +26,9 @@ services:
       retries: 3
 
   frontend:
-    image: ghcr.io/ximilalaxiang/opensoniox-frontend:${SONIOX_IMAGE_TAG:-latest}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: soniox-frontend
     restart: unless-stopped
     ports:

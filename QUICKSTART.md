@@ -13,26 +13,34 @@
 ### 使用一键脚本（推荐）
 
 ```bash
-# 进入项目目录
-cd Awesone-Soniox
+# 克隆项目
+git clone https://github.com/XimilalaXiang/Soniox.git
+cd Soniox
 
-# 运行启动脚本
+# 首次配置环境变量
+cp .env.example .env
+# 编辑 .env，至少设置 SECRET_KEY
+
+# 运行启动脚本（自动拉取镜像并启动）
 ./start.sh
 ```
 
 ### 或使用 Docker Compose
 
 ```bash
+# 拉取预构建镜像
+docker compose pull
+
 # 启动服务
-docker-compose up -d
+docker compose up -d
 
 # 查看日志
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ## 第三步：配置应用
 
-1. 打开浏览器访问 `http://localhost`
+1. 打开浏览器访问 `http://localhost:10081`
 2. 点击右上角"配置"按钮
 3. 输入你的 Soniox API Key
 4. （可选）配置 OpenAI API 用于 AI 助手功能
