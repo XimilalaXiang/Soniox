@@ -14,8 +14,8 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/XimilalaXiang/Soniox.git
-cd Soniox
+git clone https://github.com/XimilalaXiang/OpenSoniox.git
+cd OpenSoniox
 
 # 首次配置环境变量
 cp .env.example .env
@@ -72,7 +72,7 @@ A: 确保：
 ### Q: 连接失败
 A: 检查：
 - Docker 容器是否正常运行：`docker ps`
-- 查看后端日志：`docker logs soniox-backend`
+- 查看后端日志：`docker logs opensoniox-backend`
 - 防火墙是否允许端口访问
 
 ### Q: Soniox API 报错
@@ -85,7 +85,7 @@ A: 确认：
 
 - 查看完整文档：[README.md](./README.md)
 - 查看 Soniox 文档：https://soniox.com/docs
-- 提交 Issue：[GitHub Issues](https://github.com/your-repo/issues)
+- 提交 Issue：[GitHub Issues](https://github.com/XimilalaXiang/OpenSoniox/issues)
 
 ## 下一步
 

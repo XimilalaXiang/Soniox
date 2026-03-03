@@ -5,7 +5,7 @@
       <div class="container mx-auto px-4 py-6">
         <div class="flex items-center justify-between">
           <div>
-            <h1 class="text-3xl font-bold">Soniox 实时转录平台</h1>
+            <h1 class="text-3xl font-bold">OpenSoniox 实时转录平台</h1>
             <p class="text-sm text-gray-600 mt-1">
               基于 Soniox V4 的专业语音转文字解决方案
             </p>

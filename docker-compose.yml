@@ -1,7 +1,7 @@
 services:
   backend:
     image: ghcr.io/ximilalaxiang/opensoniox-backend:${SONIOX_IMAGE_TAG:-latest}
-    container_name: soniox-backend
+    container_name: opensoniox-backend
     restart: unless-stopped
     expose:
       - "17661"
@@ -13,7 +13,7 @@ services:
       - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env or environment}
       - ACCESS_PASSWORD=${ACCESS_PASSWORD:-}
     networks:
-      - soniox-network
+      - opensoniox-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:17661/"]
       interval: 30s
@@ -22,15 +22,15 @@ services:
 
   frontend:
     image: ghcr.io/ximilalaxiang/opensoniox-frontend:${SONIOX_IMAGE_TAG:-latest}
-    container_name: soniox-frontend
+    container_name: opensoniox-frontend
     restart: unless-stopped
     ports:
       - "17881:80"
     depends_on:
       - backend
     networks:
-      - soniox-network
+      - opensoniox-network
 
 networks:
-  soniox-network:
+  opensoniox-network:
     driver: bridge

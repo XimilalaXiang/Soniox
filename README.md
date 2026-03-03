@@ -1,4 +1,4 @@
-# Soniox 实时转录平台
+# OpenSoniox 实时转录平台
 
 基于 Soniox V4 的实时语音转录工具，支持发言人识别、历史记录与 AI 总结问答。
 
@@ -24,12 +24,12 @@
 services:
   backend:
     image: ghcr.io/ximilalaxiang/opensoniox-backend:latest
-    container_name: soniox-backend
+    container_name: opensoniox-backend
     restart: unless-stopped
     expose:
       - "17661"
     volumes:
-      - /opt/soniox/data:/app/data
+      - /opt/opensoniox/data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=sqlite+aiosqlite:///./data/transcriptions.db
@@ -38,7 +38,7 @@ services:
 
   frontend:
     image: ghcr.io/ximilalaxiang/opensoniox-frontend:latest
-    container_name: soniox-frontend
+    container_name: opensoniox-frontend
     restart: unless-stopped
     ports:
       - "17881:80"
@@ -56,8 +56,8 @@ docker compose up -d
 ### 方式 2：本地源码构建后部署
 
 ```bash
-git clone https://github.com/XimilalaXiang/Soniox.git
-cd Soniox
+git clone https://github.com/XimilalaXiang/OpenSoniox.git
+cd OpenSoniox
 docker compose -f docker-compose.dev.yml up -d --build
 ```
 

@@ -27,7 +27,7 @@ from auth_service import AuthService
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Soniox Transcription Platform")
+app = FastAPI(title="OpenSoniox Transcription Platform")
 # ============== 简单密码登录（Cookie） ==============
 ACCESS_PASSWORD = os.getenv("ACCESS_PASSWORD", "")
 
@@ -198,7 +198,7 @@ active_soniox_connections: Dict[str, SonioxWebSocketService] = {}
 @app.get("/")
 async def root():
     """健康检查"""
-    return {"status": "ok", "service": "Soniox Transcription Platform"}
+    return {"status": "ok", "service": "OpenSoniox Transcription Platform"}
 
 
 @app.websocket("/ws/transcribe")

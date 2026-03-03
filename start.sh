@@ -2,9 +2,9 @@
 
 set -euo pipefail
 
-# Soniox 实时转录平台启动脚本
+# OpenSoniox 实时转录平台启动脚本
 
-echo "🚀 启动 Soniox 实时转录平台..."
+echo "🚀 启动 OpenSoniox 实时转录平台..."
 
 # 检查 Docker CLI 是否可用
 if ! docker --version >/dev/null 2>&1; then
